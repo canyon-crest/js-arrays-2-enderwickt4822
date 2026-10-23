@@ -27,8 +27,8 @@
 
 const colors = ["red", "green", "blue"];
 
-for (each in colors) {
-    console.log("Color: " + each);
+for (i in colors) {
+    console.log("Color: " + colors[i]);
 }
 
 // ============================================
@@ -105,6 +105,8 @@ for (let i = 0; i <= 4; i++) {
         largest = num;
     }
 }
+
+console.log("Sum: " + total);
 
 console.log("Numbers: " + string);
 
