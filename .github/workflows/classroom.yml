@@ -1,0 +1,247 @@
+name: autograde
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  autograde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - name: Install Jest
+        run: |
+          npm init -y >/dev/null 2>&1 || true
+          npm install --save-dev jest@29
+
+      - name: Write jest config
+        run: |
+          cat > jest.config.cjs <<'EOF'
+          module.exports = {
+            testEnvironment: 'node',
+            testMatch: ['**/__tests__/**/*.test.cjs']
+          };
+          EOF
+
+      - name: Write tests
+        run: |
+          mkdir -p __tests__
+          cat > __tests__/arrays.test.cjs <<'TESTEOF'
+          const fs = require('fs');
+          const path = require('path');
+          const vm = require('vm');
+
+          const source = fs.readFileSync(path.resolve('script.js'), 'utf8');
+
+          function runWithInputs(promptValues) {
+            let promptIndex = 0;
+            const logs = [];
+            const sandbox = {
+              prompt: function(msg) { return promptValues[promptIndex++]; },
+              alert: function(msg) { },
+              console: { log: function(msg) { logs.push(String(msg)); }, error: function(){}, warn: function(){} },
+              parseInt: parseInt,
+              parseFloat: parseFloat,
+              isNaN: isNaN,
+              NaN: NaN,
+              undefined: undefined,
+              String: String,
+              Number: Number,
+              Math: Math,
+              Array: Array,
+            };
+            vm.createContext(sandbox);
+            vm.runInContext(source, sandbox, { timeout: 5000 });
+            return logs;
+          }
+
+          // script.js with its comment lines removed. The STEP comments name the
+          // very things these checks look for, so a check of the whole file would
+          // pass on untouched starter code.
+          function codeLines() {
+            return source.split('\n')
+              .map(function(line) { return line.trim(); })
+              .filter(function(line) { return !line.startsWith('//') && !line.startsWith('*'); })
+              .join('\n');
+          }
+
+          describe('Unit 8.5 – Arrays', function() {
+
+            test('colors warm up', function() {
+              let logs = runWithInputs(['10', '20', '30', '40', '50']);
+              let colorLogs = logs.filter(function(l) { return l.indexOf('Color:') !== -1; });
+              expect(colorLogs.length).toBe(3);
+              expect(colorLogs[0]).toBe('Color: red');
+              expect(colorLogs[1]).toBe('Color: green');
+              expect(colorLogs[2]).toBe('Color: blue');
+            });
+
+            test('uses an array', function() {
+              expect(codeLines()).toMatch(/\[|\.push\s*\(/);
+            });
+
+            test('uses a for loop', function() {
+              expect(codeLines()).toMatch(/\bfor\s*\(/);
+            });
+
+            test('numbers list', function() {
+              let logs = runWithInputs(['10', '20', '30', '40', '50']);
+              let numLine = logs.find(function(l) { return l.indexOf('Numbers:') !== -1; });
+              expect(numLine).toBeDefined();
+              expect(numLine).toBe('Numbers: 10, 20, 30, 40, 50');
+            });
+
+            test('sum', function() {
+              let logs = runWithInputs(['10', '20', '30', '40', '50']);
+              let sumLine = logs.find(function(l) { return l.indexOf('Sum:') !== -1; });
+              expect(sumLine).toBeDefined();
+              expect(sumLine).toBe('Sum: 150');
+            });
+
+            test('average and even count', function() {
+              let logs = runWithInputs(['10', '20', '30', '40', '50']);
+              let avgLine = logs.find(function(l) { return l.indexOf('Average:') !== -1; });
+              expect(avgLine).toBeDefined();
+              expect(avgLine).toBe('Average: 30');
+              let evenLine = logs.find(function(l) { return l.indexOf('Even count:') !== -1; });
+              expect(evenLine).toBeDefined();
+              expect(evenLine).toBe('Even count: 5');
+            });
+
+            test('largest', function() {
+              let logs = runWithInputs(['10', '20', '30', '40', '50']);
+              let largestLine = logs.find(function(l) { return l.indexOf('Largest:') !== -1; });
+              expect(largestLine).toBeDefined();
+              expect(largestLine).toBe('Largest: 50');
+            });
+
+          });
+          TESTEOF
+
+      # === Graded steps (sum to 100) ===
+      - id: t_colors
+        name: colors warm up
+        uses: cs-plus-plus/autograding-command-grader@v1
+        with:
+          test-name: colors warm up
+          setup-command: echo "ready"
+          command: npx jest --runInBand --testNamePattern "colors warm up$"
+          timeout: 60
+          max-score: 15
+
+      - id: t_array
+        name: uses an array
+        uses: cs-plus-plus/autograding-command-grader@v1
+        with:
+          test-name: uses an array
+          setup-command: echo "ready"
+          command: npx jest --runInBand --testNamePattern "uses an array$"
+          timeout: 60
+          max-score: 10
+
+      - id: t_for_loop
+        name: uses a for loop
+        uses: cs-plus-plus/autograding-command-grader@v1
+        with:
+          test-name: uses a for loop
+          setup-command: echo "ready"
+          command: npx jest --runInBand --testNamePattern "uses a for loop$"
+          timeout: 60
+          max-score: 5
+
+      - id: t_numbers
+        name: numbers list
+        uses: cs-plus-plus/autograding-command-grader@v1
+        with:
+          test-name: numbers list
+          setup-command: echo "ready"
+          command: npx jest --runInBand --testNamePattern "numbers list$"
+          timeout: 60
+          max-score: 15
+
+      - id: t_sum
+        name: sum
+        uses: cs-plus-plus/autograding-command-grader@v1
+        with:
+          test-name: sum
+          setup-command: echo "ready"
+          command: npx jest --runInBand --testNamePattern "^Unit 8.5.*sum$"
+          timeout: 60
+          max-score: 15
+
+      - id: t_avg_even
+        name: average and even count
+        uses: cs-plus-plus/autograding-command-grader@v1
+        with:
+          test-name: average and even count
+          setup-command: echo "ready"
+          command: npx jest --runInBand --testNamePattern "average and even count$"
+          timeout: 60
+          max-score: 20
+
+      - id: t_largest
+        name: largest
+        uses: cs-plus-plus/autograding-command-grader@v1
+        with:
+          test-name: largest
+          setup-command: echo "ready"
+          command: npx jest --runInBand --testNamePattern "largest$"
+          timeout: 60
+          max-score: 20
+
+      # Summary
+      - name: Build summary
+        shell: bash
+        run: |
+          npx jest --runInBand --json --outputFile=jest-summary.json || true
+          node - <<'NODE'
+          const fs = require("fs");
+          let jr = {};
+          try { jr = JSON.parse(fs.readFileSync("jest-summary.json","utf8")); } catch {}
+          const assertions = (jr.testResults||[]).flatMap(t => t.assertionResults || []);
+          const tests = [
+            { name: "colors warm up", pts: 15 },
+            { name: "uses an array", pts: 10 },
+            { name: "uses a for loop", pts: 5 },
+            { name: "numbers list", pts: 15 },
+            { name: "sum", pts: 15 },
+            { name: "average and even count", pts: 20 },
+            { name: "largest", pts: 20 },
+          ];
+          let earned = 0;
+          const lines = ["# Unit 8.5 Autograder Summary", ""];
+          for (const t of tests) {
+            const a = assertions.find(x => x.title === t.name);
+            const passed = !!a && a.status === "passed";
+            if (passed) earned += t.pts;
+            lines.push((passed ? "✅" : "❌") + " " + t.name + " (" + t.pts + " pts)");
+          }
+          lines.push("", "**Score: " + earned + "/100**");
+          console.log(lines.join("\n"));
+          if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
+          NODE
+
+      - name: Prepare reporter env
+        shell: bash
+        run: |
+          echo "T_COLORS_RESULTS=${{ steps.t_colors.outputs.result }}"       >> "$GITHUB_ENV"
+          echo "T_ARRAY_RESULTS=${{ steps.t_array.outputs.result }}"         >> "$GITHUB_ENV"
+          echo "T_FOR_LOOP_RESULTS=${{ steps.t_for_loop.outputs.result }}"   >> "$GITHUB_ENV"
+          echo "T_NUMBERS_RESULTS=${{ steps.t_numbers.outputs.result }}"     >> "$GITHUB_ENV"
+          echo "T_SUM_RESULTS=${{ steps.t_sum.outputs.result }}"             >> "$GITHUB_ENV"
+          echo "T_AVG_EVEN_RESULTS=${{ steps.t_avg_even.outputs.result }}"   >> "$GITHUB_ENV"
+          echo "T_LARGEST_RESULTS=${{ steps.t_largest.outputs.result }}"     >> "$GITHUB_ENV"
+
+      - name: Report grades
+        uses: cs-plus-plus/autograding-grading-reporter@v1
+        with:
+          runners: 't_colors,t_array,t_for_loop,t_numbers,t_sum,t_avg_even,t_largest'
+          token: ${{ github.token }}
