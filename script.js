@@ -25,6 +25,11 @@
 //         "Color: blue"
 //         Use: console.log("Color: " + colors[i])
 
+const colors = ["red", "green", "blue"];
+
+for (each in colors) {
+    console.log("Color: " + each);
+}
 
 // ============================================
 //  MAIN: Number Analyzer
@@ -69,3 +74,44 @@
 //         Start with the first number as the largest.
 //         Loop through the rest and update if you find a bigger one.
 //         Print: console.log("Largest: " + largest)
+
+let numbers = [];
+
+let string = "";
+
+let total = 0;
+
+let evenCount = 0;
+
+let largest = -1;
+
+for (let i = 0; i <= 4; i++) {
+    let num = parseInt(prompt("Enter number " + (i + 1)))
+    numbers.push(num);
+
+    if (i == 4) {
+        string += num
+    } else {
+        string += num + ", "
+    }
+
+    total += num;
+
+    if (num % 2 == 0) {
+        evenCount++;
+    }
+
+    if (num > largest) {
+        largest = num;
+    }
+}
+
+console.log("Numbers: " + string);
+
+let avg = total/numbers.length;
+
+console.log("Average: " + avg);
+
+console.log("Even count: " + evenCount);
+
+console.log("Largest: " + largest);
